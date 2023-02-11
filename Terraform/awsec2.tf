@@ -9,80 +9,83 @@ provider "aws" {
   region = "us-west-2"
 }
 
-resource "aws_vpc" "example" {
-  cidr_block = "10.0.0.0/16"
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+
+  name = "my-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["us-west-2a", "us-west-2b"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
 
   tags = {
-    Name = "example-vpc"
+    Terraform   = "true"
+    Environment = "dev"
   }
 }
 
-resource "aws_subnet" "example_a" {
-  vpc_id            = aws_vpc.example.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-west-2a"
+module "ec2_instance" {
+  source = "terraform-aws-modules/ec2-instance/aws"
+
+  name           = "my-ec2-instance"
+  ami            = "ami-0c55b159cbfafe1f0"
+  instance_type  = "t2.micro"
+  vpc_security_group_ids = [module.vpc.default_security_group_id]
+
+  subnet_id = module.vpc.public_subnets[0]
 
   tags = {
-    Name = "example-subnet-a"
+    Terraform   = "true"
+    Environment = "dev"
   }
 }
 
-resource "aws_subnet" "example_b" {
-  vpc_id            = aws_vpc.example.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "us-west-2b"
+module "autoscaling_group" {
+  source = "terraform-aws-modules/autoscaling/aws"
+
+  name            = "my-asg"
+  max_size        = 5
+  min_size        = 1
+  desired_capacity = 2
+
+  launch_template = {
+    id = aws_launch_template.ec2.id
+  }
+
+  vpc_zone_identifier = [module.vpc.public_subnets[0]]
 
   tags = {
-    Name = "example-subnet-b"
+    Terraform   = "true"
+    Environment = "dev"
   }
 }
 
-resource "aws_security_group" "example" {
-  name        = "example-security-group"
-  description = "Example security group for EC2 instance"
+resource "aws_launch_template" "ec2" {
+  name = "my-launch-template"
 
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  vpc_id = aws_vpc.example.id
-}
-
-resource "aws_instance" "example" {
-  ami           = "ami-0c55b159cbfafe1f0"
+  image_id = "ami-0c55b159cbfafe1f0"
   instance_type = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.example.id]
-  subnet_id     = aws_subnet.example_a.id
+
+  security_group_ids = [module.vpc.default_security_group_id]
+
+  block_device_mappings = [
+    {
+      device_name = "/dev/xvda"
+      ebs = {
+        volume_size = 8
+      }
+    }
+  ]
 
   tags = {
-    Name = "example-instance-a"
+    Terraform   = "true"
+    Environment = "dev"
   }
-  connection {
-    type        = "ssh"
-    user        = "ec2-user"
-    private_key = file("~/.ssh/id_rsa")
-  }
-
+}
   provisioner "local-exec" {
     command = "echo Provisioning complete!"
   }
-
-  block_device {
-    device_name = "/dev/xvda"
-    volume_type = "gp2"
-    volume_size = 8
-  }
-
   lifecycle {
     create_before_destroy = true
   }
@@ -110,5 +113,4 @@ resource "aws_instance" "example_b" {
 
 resource "aws_iam_access_key" "example" {
   user = "example-user"
-}
 }
