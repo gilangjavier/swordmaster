@@ -109,8 +109,44 @@ resource "aws_instance" "example_b" {
   lifecycle {
     create_before_destroy = true
   }
+  module "elb" {
+  source = "terraform-aws-modules/elb/aws"
+
+  name = "my-elb"
+  subnets = module.vpc.public_subnets
+
+  tags = {
+    Terraform   = "true"
+    Environment = "dev"
+  }
+
+  health_check = {
+    target = "HTTP:80/health"
+    interval = 30
+    timeout = 5
+    healthy_threshold = 10
+    unhealthy_threshold = 2
+  }
+
+  listener = [
+    {
+      instance_port     = 80
+      instance_protocol = "HTTP"
+      lb_port           = 80
+      lb_protocol       = "HTTP"
+    },
+  ]
+
+  target_group_attributes = [
+    {
+      key = "deregistration_delay.timeout_seconds"
+      value = "20"
+    },
+  ]
+
+  depends_on = [module.autoscaling_group.module_elb_target_group_arn]
+  resource "aws_iam_access_key" "example" {
+  user = "example-user"
 }
 
-resource "aws_iam_access_key" "example" {
-  user = "example-user"
 }
