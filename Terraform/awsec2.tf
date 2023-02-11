@@ -67,9 +67,19 @@ resource "aws_instance" "example" {
   tags = {
     Name = "example-instance-a"
   }
+  connection {
+    type        = "ssh"
+    user        = "ec2-user"
+    private_key = file("~/.ssh/id_rsa")
+  }
 
-  root_block_device {
-    volume_type = "standard"
+  provisioner "local-exec" {
+    command = "echo Provisioning complete!"
+  }
+
+  block_device {
+    device_name = "/dev/xvda"
+    volume_type = "gp2"
     volume_size = 8
   }
 
