@@ -1,9 +1,9 @@
 #!/bin/bash
 #Script for Automation Provisioning Wordpress, PHP8, MariaDB, and Nginx.
-DBNAME=wordpress
-DBROOTPASSWORD=gilang0
-DBUSER=wordpressuser
-DBPASSWORD=gilang1
+DBNAME=your_dbname
+DBROOTPASSWORD=your_password
+DBUSER=your_user
+DBPASSWORD=your_password
 SITENAME=wordpress/public_html
 
 echo "*******************************"
