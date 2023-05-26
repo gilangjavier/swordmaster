@@ -1,7 +1,3 @@
-Berikut adalah contoh file README.md yang bisa Anda gunakan:
-
----
-
 # Terraform AWS Deployment Scripts
 
 This repository contains a collection of Terraform scripts for managing resources on Amazon Web Services (AWS).
