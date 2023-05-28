@@ -1,0 +1,40 @@
+version: '3.7'
+
+services:
+  redis:
+    image: redis:latest
+    volumes:
+      - redis_data:/data
+    networks:
+      - proxy
+    restart: always
+    environment:
+      - REDIS_PASSWORD=yourpassword
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"  # limit log file size
+        max-file: "10"   # limit number of log files
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: always
+    networks:
+      - proxy
+    environment:
+      REDIS_HOSTS: local:redis:6379
+      VIRTUAL_HOST: rediscommander.mywebsite.com
+      LETSENCRYPT_HOST: rediscommander.mywebsite.com
+      LETSENCRYPT_EMAIL: myemail@mywebsite.com
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"  # limit log file size
+        max-file: "10"   # limit number of log files
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  redis_data: {}

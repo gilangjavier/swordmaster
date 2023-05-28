@@ -1,0 +1,61 @@
+version: '3.8'
+services:
+
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/nginx/vhost.d
+      - /usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./certs:/etc/nginx/certs:ro
+    labels:
+      - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/etc/nginx/certs:rw
+    depends_on:
+      - nginx-proxy
+
+  jenkins-master:
+    image: jenkins/jenkins:lts
+    environment:
+      - VIRTUAL_HOST=jenkins-master.example.com
+      - VIRTUAL_PORT=8080
+      - LETSENCRYPT_HOST=jenkins-master.example.com
+      - LETSENCRYPT_EMAIL=youremail@example.com
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    ports:
+      - "50000:50000"
+
+  jenkins-slave-1:
+    image: jenkins/inbound-agent
+    environment:
+      - JENKINS_URL=http://jenkins-master:8080
+      - JENKINS_SECRET=jenkins_slave_1_secret
+      - JENKINS_AGENT_NAME=jenkins-slave-1
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent
+    volumes:
+      - jenkins_slave_1_workdir:/home/jenkins/agent
+
+  jenkins-slave-2:
+    image: jenkins/inbound-agent
+    environment:
+      - JENKINS_URL=http://jenkins-master:8080
+      - JENKINS_SECRET=jenkins_slave_2_secret
+      - JENKINS_AGENT_NAME=jenkins-slave-2
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent
+    volumes:
+      - jenkins_slave_2_workdir:/home/jenkins/agent
+
+volumes:
+  jenkins_home:
+  jenkins_slave_1_workdir:
+  jenkins_slave_2_workdir:
+  certs:

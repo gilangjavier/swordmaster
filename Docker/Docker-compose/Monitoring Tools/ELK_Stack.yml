@@ -1,0 +1,93 @@
+version: '3.4'
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy:alpine
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy"
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./certs:/etc/nginx/certs
+      - ./vhost.d:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+      - ./custom.conf:/etc/nginx/conf.d/custom.conf:ro
+    networks:
+      - proxy-tier
+
+  letsencrypt-companion:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: letsencrypt-companion
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/etc/nginx/certs
+      - ./vhost.d:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+    depends_on:
+      - nginx-proxy
+    networks:
+      - proxy-tier
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.1
+    environment:
+      - discovery.type=single-node
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - proxy-tier
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.12.1
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    networks:
+      - proxy-tier
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.12.1
+    environment:
+      - VIRTUAL_HOST=kibana.yourdomain.com
+      - LETSENCRYPT_HOST=kibana.yourdomain.com
+      - LETSENCRYPT_EMAIL=youremail@yourdomain.com
+    networks:
+      - proxy-tier
+    depends_on:
+      - elasticsearch
+
+volumes:
+  esdata: {}
+
+networks:
+  proxy-tier:
+
+# Create this logstash.conf file:
+# input {
+#   beats {
+#     port => "5044"
+#   }
+# }
+
+# filter {
+#   grok {
+#     match => { "message" => "%{COMBINEDAPACHELOG}" }
+#   }
+#   date {
+#     match => [ "timestamp", "dd/MMM/yyyy:HH:mm:ss Z" ]
+#     locale => en
+#   }
+#   geoip {
+#     source => "clientip"
+#   }
+# }
+
+# output {
+#   elasticsearch {
+#     hosts => ["elasticsearch:9200"]
+#   }
+# }

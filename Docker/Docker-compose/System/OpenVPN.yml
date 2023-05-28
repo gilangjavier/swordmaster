@@ -1,0 +1,53 @@
+version: '3'
+services:
+  openvpn:
+    cap_add:
+      - NET_ADMIN
+    image: dperson/openvpn-client:latest
+    volumes:
+      - /vpn:/vpn   # replace with your path
+      - /var/log/openvpn:/var/log  # Log file path
+    environment:
+      - OPENVPN_OPTS=--inactive 3600 --ping 10 --ping-exit 60
+      - TZ=Asia/Jakarta   # Set your timezone
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    command: '-r 192.168.1.0/24'  # replace with your network
+    restart: always
+    networks:
+      - kafka
+
+networks:
+  kafka:
+
+# Create TLS Cert first:
+# CA:
+# openssl genpkey -algorithm RSA -out ca.key
+# openssl req -new -x509 -days 365 -key ca.key -out ca.crt
+
+# Client CA:
+# openssl genpkey -algorithm RSA -out client.key
+# openssl req -new -key client.key -out client.csr
+
+# Signature Client CA:
+# openssl x509 -req -days 365 -in client.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out client.crt
+
+# and create .ovpn configuration file:
+# client
+# dev tun
+# proto udp
+# remote YOUR_VPN_SERVER_IP YOUR_VPN_SERVER_PORT
+# resolv-retry infinite
+# nobind
+# persist-key
+# persist-tun
+# ca ca.crt
+# cert client.crt
+# key client.key
+# remote-cert-tls server
+# cipher AES-256-CBC
+# verb 3
+
+# And file Crendentials:
+# username
+# password

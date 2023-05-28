@@ -1,0 +1,32 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - /var/log/postgres:/var/log/postgresql
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_USER: myuser
+      POSTGRES_DB: mydatabase
+    networks:
+      - proxy
+
+  adminer:
+    image: adminer
+    restart: always
+    networks:
+      - proxy
+    environment:
+      VIRTUAL_HOST: adminer.mywebsite.com
+      LETSENCRYPT_HOST: adminer.mywebsite.com
+      LETSENCRYPT_EMAIL: myemail@mywebsite.com
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  db_data: {}

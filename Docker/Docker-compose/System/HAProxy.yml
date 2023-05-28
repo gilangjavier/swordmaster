@@ -1,0 +1,27 @@
+version: '3.7'
+
+services:
+  haproxy:
+    image: haproxy:2.3
+    volumes:
+      - "./haproxy:/usr/local/etc/haproxy"
+      - "./logs:/var/log/haproxy"
+    networks:
+      - haproxy-network
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+
+networks:
+  haproxy-network:
+    driver: bridge
+
+volumes:
+  haproxy:
+  logs:

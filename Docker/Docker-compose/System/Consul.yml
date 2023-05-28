@@ -1,0 +1,53 @@
+#First, create TLS Key
+
+version: '3.7'
+services:
+  consul-server-bootstrap:
+    image: consul:latest
+    volumes:
+      - consul-server-bootstrap-data:/consul/data
+      - ./ssl:/etc/consul.d/tls/
+    command: "agent -server -bootstrap-expect=3 -ui -node=server-bootstrap -client=0.0.0.0 -data-dir=/consul/data -ca-file=/etc/consul.d/tls/ca.pem -cert-file=/etc/consul.d/tls/consul.pem -key-file=/etc/consul.d/tls/consul-key.pem"
+    networks:
+      - consul-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.consul.rule=Host(`consul.yourdomain.com`)"
+      - "traefik.http.services.consul.loadbalancer.server.port=8500"
+
+  consul-server-1:
+    image: consul:latest
+    volumes:
+      - consul-server-1-data:/consul/data
+      - ./ssl:/etc/consul.d/tls/
+    command: "agent -server -bootstrap-expect=3 -node=server-1 -client=0.0.0.0 -data-dir=/consul/data -ca-file=/etc/consul.d/tls/ca.pem -cert-file=/etc/consul.d/tls/consul.pem -key-file=/etc/consul.d/tls/consul-key.pem"
+    networks:
+      - consul-net
+
+  consul-server-2:
+    image: consul:latest
+    volumes:
+      - consul-server-2-data:/consul/data
+      - ./ssl:/etc/consul.d/tls/
+    command: "agent -server -bootstrap-expect=3 -node=server-2 -client=0.0.0.0 -data-dir=/consul/data -ca-file=/etc/consul.d/tls/ca.pem -cert-file=/etc/consul.d/tls/consul.pem -key-file=/etc/consul.d/tls/consul-key.pem"
+    networks:
+      - consul-net
+
+  traefik:
+    image: traefik:latest
+    command: --api --docker
+    ports:
+      - 80:80
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - consul-net
+
+networks:
+  consul-net:
+
+volumes:
+  consul-server-bootstrap-data:
+  consul-server-1-data:
+  consul-server-2-data:

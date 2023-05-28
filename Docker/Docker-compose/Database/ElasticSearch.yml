@@ -1,0 +1,71 @@
+version: '3.7'
+
+services:
+  elasticsearch1:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
+    environment:
+      - "node.name=elasticsearch1"
+      - "cluster.name=es-docker-cluster"
+      - "discovery.seed_hosts=elasticsearch2,elasticsearch3"
+      - "cluster.initial_master_nodes=elasticsearch1,elasticsearch2,elasticsearch3"
+      - "network.host=0.0.0.0"
+      - "xpack.security.enabled=true"
+      - "ELASTIC_PASSWORD=YourSecurePassword"
+    volumes:
+      - esdata1:/usr/share/elasticsearch/data
+    networks:
+      - esnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.elasticsearch1.rule=Host(`elasticsearch1.yourdomain.com`)"
+      - "traefik.http.services.elasticsearch1.loadbalancer.server.port=9200"
+      
+  elasticsearch2:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
+    environment:
+      - "node.name=elasticsearch2"
+      - "cluster.name=es-docker-cluster"
+      - "discovery.seed_hosts=elasticsearch1,elasticsearch3"
+      - "cluster.initial_master_nodes=elasticsearch1,elasticsearch2,elasticsearch3"
+      - "network.host=0.0.0.0"
+      - "xpack.security.enabled=true"
+      - "ELASTIC_PASSWORD=YourSecurePassword"
+    volumes:
+      - esdata2:/usr/share/elasticsearch/data
+    networks:
+      - esnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.elasticsearch2.rule=Host(`elasticsearch2.yourdomain.com`)"
+      - "traefik.http.services.elasticsearch2.loadbalancer.server.port=9200"
+
+  elasticsearch3:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.1
+    environment:
+      - "node.name=elasticsearch3"
+      - "cluster.name=es-docker-cluster"
+      - "discovery.seed_hosts=elasticsearch1,elasticsearch2"
+      - "cluster.initial_master_nodes=elasticsearch1,elasticsearch2,elasticsearch3"
+      - "network.host=0.0.0.0"
+      - "xpack.security.enabled=true"
+      - "ELASTIC_PASSWORD=YourSecurePassword"
+    volumes:
+      - esdata3:/usr/share/elasticsearch/data
+    networks:
+      - esnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.elasticsearch3.rule=Host(`elasticsearch3.yourdomain.com`)"
+      - "traefik.http.services.elasticsearch3.loadbalancer.server.port=9200"
+
+volumes:
+  esdata1:
+    driver: local
+  esdata2:
+    driver: local
+  esdata3:
+    driver: local
+
+networks:
+  esnet:
+    driver: bridge

@@ -1,0 +1,44 @@
+version: '3.7'
+
+services:
+  vault:
+    image: vault:1.7.1
+    volumes:
+      - ./vault/config:/vault/config:ro
+      - vault_data:/vault/data
+    command: server -config=/vault/config/vault.hcl
+    networks:
+      - vaultnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vault.rule=Host(`vault.yourdomain.com`)"
+      - "traefik.http.services.vault.loadbalancer.server.port=8200"
+    cap_add:
+      - IPC_LOCK    
+
+volumes:
+  vault_data:
+    driver: local
+
+networks:
+  vaultnet:
+    driver: bridge
+
+# Create vault.hcl configuration:
+# storage "file" {
+#   path = "/vault/data"
+# }
+
+# listener "tcp" {
+#   address     = "0.0.0.0:8200"
+#   tls_disable = 1
+# }
+
+# ui = true
+
+
+#Next, Initiate Vault:
+# vault operator init
+ 
+# and copy vault key, after that unseal vault:
+# vault operator unseal

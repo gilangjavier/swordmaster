@@ -1,0 +1,34 @@
+version: '3.7'
+
+services:
+  db:
+    image: mysql:5.7
+    volumes:
+      - db_data:/var/lib/mysql
+      - /var/log/mysql:/var/log/mysql
+    restart: always
+    command: --general-log=1 --general-log-file=/var/log/mysql/general.log
+    environment:
+      MYSQL_ROOT_PASSWORD: mysecretpassword
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: mypassword
+    networks:
+      - proxy
+
+  adminer:
+    image: adminer
+    restart: always
+    networks:
+      - proxy
+    environment:
+      VIRTUAL_HOST: adminer.mywebsite.com
+      LETSENCRYPT_HOST: adminer.mywebsite.com
+      LETSENCRYPT_EMAIL: myemail@mywebsite.com
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  db_data: {}

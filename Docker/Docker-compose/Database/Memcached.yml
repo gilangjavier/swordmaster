@@ -1,0 +1,17 @@
+version: '3'
+services:
+  memcached:
+    image: memcached:latest
+    command: memcached -m 64
+    volumes:
+      - memcached_data:/data
+    ports:
+      - "11211:11211"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+
+volumes:
+  memcached_data:

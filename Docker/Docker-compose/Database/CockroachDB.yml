@@ -1,0 +1,52 @@
+# Before run this configuration, please create Dockerfile with value below:
+# FROM cockroachdb/cockroach:latest
+
+# # Set working directory
+# WORKDIR /cockroach
+
+# # Create the certificates
+# RUN cockroach cert create-ca --certs-dir=/cockroach/certs --ca-key=/cockroach/certs/ca.key && \
+#     cockroach cert create-node localhost --certs-dir=/cockroach/certs --ca-key=/cockroach/certs/ca.key && \
+#     cockroach cert create-client root --certs-dir=/cockroach/certs --ca-key=/cockroach/certs/ca.key
+
+# # Start CockroachDB
+# CMD ["cockroach", "start", "--certs-dir=certs"]
+
+version: '3.7'
+
+services:
+  cockroachdb:
+    build: .
+    volumes:
+      - cockroachdb_data:/cockroach/cockroach-data
+      - ./certs:/cockroach/certs
+    networks:
+      - proxy
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"  # limit log file size
+        max-file: "10"   # limit number of log files
+
+  cockroachdb_adminer:
+    image: adminer
+    networks:
+      - proxy
+    restart: always
+    environment:
+      VIRTUAL_HOST: adminer.mywebsite.com
+      LETSENCRYPT_HOST: adminer.mywebsite.com
+      LETSENCRYPT_EMAIL: myemail@mywebsite.com
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"  # limit log file size
+        max-file: "10"   # limit number of log files
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  cockroachdb_data: {}

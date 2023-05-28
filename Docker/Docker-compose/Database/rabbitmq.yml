@@ -1,0 +1,28 @@
+version: '3'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=rabbitmq
+      - RABBITMQ_DEFAULT_PASS=rabbitmq_password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - web
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.yourdomain.com`)
+      - traefik.http.services.rabbitmq.loadbalancer.server.port=15672
+      - traefik.http.routers.rabbitmq.tls.certresolver=myresolver
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+
+volumes:
+  rabbitmq_data:
+
+networks:
+  web:
+    external: true

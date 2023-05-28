@@ -1,0 +1,68 @@
+version: '3.4'
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy:alpine
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy"
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./certs:/etc/nginx/certs
+      - ./vhost.d:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+      - ./custom.conf:/etc/nginx/conf.d/custom.conf:ro
+    networks:
+      - proxy-tier
+
+  letsencrypt-companion:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: letsencrypt-companion
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/etc/nginx/certs
+      - ./vhost.d:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+    depends_on:
+      - nginx-proxy
+    networks:
+      - proxy-tier
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_storage:/var/lib/grafana
+    environment:
+      - VIRTUAL_HOST=grafana.yourdomain.com
+      - LETSENCRYPT_HOST=grafana.yourdomain.com
+      - LETSENCRYPT_EMAIL=youremail@yourdomain.com
+    networks:
+      - proxy-tier
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - prometheus_storage:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    environment:
+      - VIRTUAL_HOST=prometheus.yourdomain.com
+      - LETSENCRYPT_HOST=prometheus.yourdomain.com
+      - LETSENCRYPT_EMAIL=youremail@yourdomain.com
+    networks:
+      - proxy-tier
+
+volumes:
+  prometheus_storage: {}
+  grafana_storage: {}
+
+networks:
+  proxy-tier:
+
+# Create 'costum.conf' file with value: server_tokens off;
