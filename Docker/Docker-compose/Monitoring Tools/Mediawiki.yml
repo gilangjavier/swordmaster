@@ -1,0 +1,37 @@
+version: '3.7'
+
+services:
+  mediawiki:
+    image: mediawiki
+    volumes:
+      - ./mediawiki:/var/www/html/images
+      - ./logs:/var/log
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mediawiki.rule=Host(`mediawiki.example.com`)"
+      - "traefik.http.routers.mediawiki.entrypoints=websecure"
+      - "traefik.http.routers.mediawiki.tls.certresolver=myresolver"
+    networks:
+      - web
+    environment:
+      MEDIAWIKI_DB_TYPE: mysql
+      MEDIAWIKI_DB_HOST: db
+      MEDIAWIKI_DB_USER: mediawiki
+      MEDIAWIKI_DB_PASSWORD: mediawiki
+      MEDIAWIKI_DB_NAME: my_wiki
+
+  db:
+    image: mysql:5.7
+    volumes:
+      - ./db_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: mediawiki
+      MYSQL_PASSWORD: mediawiki
+      MYSQL_DATABASE: my_wiki
+    networks:
+      - web
+
+networks:
+  web:
+    external: true

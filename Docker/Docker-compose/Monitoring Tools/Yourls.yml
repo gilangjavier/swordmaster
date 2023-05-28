@@ -1,0 +1,38 @@
+version: '3'
+
+services:
+  yourls:
+    image: yourls:latest
+    volumes:
+      - ./data:/var/www/html/user
+      - ./logs:/var/log
+    environment:
+      YOURLS_SITE: 'https://yourls.example.com'
+      YOURLS_USER: 'your_username'
+      YOURLS_PASS: 'your_password'
+      YOURLS_NOSTATS: 'false'
+      YOURLS_PRIVATE: 'true'
+      YOURLS_COOKIEKEY: 'modify this text with something random'
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.yourls.rule=Host(`yourls.example.com`)"
+      - "traefik.http.routers.yourls.entrypoints=websecure"
+      - "traefik.http.routers.yourls.tls.certresolver=myresolver"
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: 'your_mysql_root_password'
+      MYSQL_DATABASE: 'yourls'
+      MYSQL_USER: 'your_mysql_user'
+      MYSQL_PASSWORD: 'your_mysql_password'
+    volumes:
+      - ./db_data:/var/lib/mysql
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
