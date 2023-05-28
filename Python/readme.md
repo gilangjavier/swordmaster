@@ -26,7 +26,7 @@ Navigate to the directory containing the script you want to run.
 Run the script using Python. For example, python my_script.py.
 Each script is standalone and can be run independently of the others.
 
-##Contributing to The Project
+## Contributing to The Project
 If you want to contribute to the project, follow these steps:
 
 Fork this repository.
