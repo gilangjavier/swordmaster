@@ -1,0 +1,28 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    prometheus_version: 2.30.3
+    prometheus_dir: /opt/prometheus
+    prometheus_config_dir: "{{ prometheus_dir }}/conf"
+    prometheus_data_dir: "{{ prometheus_dir }}/data"
+  tasks:
+    - name: Create Prometheus directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ prometheus_dir }}"
+        - "{{ prometheus_config_dir }}"
+        - "{{ prometheus_data_dir }}"
+        
+    - name: Download and extract Prometheus binary
+      unarchive:
+        src: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+        creates: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/prometheus"
+        
+    - name: Move Prometheus binary to installation directory
+      command: mv /tmp

@@ -1,0 +1,87 @@
+---
+- hosts: your_host
+  become: yes
+  vars:
+    mysql_root_password: your_mysql_root_password
+    mysql_db: your_database_name
+    mysql_user: your_database_user
+    mysql_password: your_database_password
+  roles:
+    - geerlingguy.mysql
+    - geerlingguy.nginx
+    - geerlingguy.pip
+    - geerlingguy.nodejs
+    - geerlingguy.docker
+  tasks:
+    - name: Create directory for site
+      file:
+        path: /var/www/html
+        state: directory
+
+    - name: Setup Nginx site configuration
+      copy:
+        src: /your/path/to/nginx/mysql.conf
+        dest: /etc/nginx/sites-available/mysql.conf
+      notify:
+        - Reload nginx
+
+    - name: Enable site configuration
+      file:
+        src: /etc/nginx/sites-available/mysql.conf
+        dest: /etc/nginx/sites-enabled/mysql.conf
+        state: link
+
+    - name: Setup MySQL database
+      mysql_db:
+        name: "{{ mysql_db }}"
+        state: present
+
+    - name: Setup MySQL user
+      mysql_user:
+        name: "{{ mysql_user }}"
+        password: "{{ mysql_password }}"
+        priv: "{{ mysql_db }}.*:ALL"
+        state: present
+
+    - name: Install Docker Python module
+      pip:
+        name: docker
+
+    - name: Run Adminer Docker container
+      docker_container:
+        name: adminer
+        image: adminer
+        state: started
+        restart_policy: always
+        published_ports: 8080:8080
+
+    - name: Install Filebeat
+      include_role:
+        name: elastic.beats
+      vars:
+        beat: filebeat
+        beat_conf:
+          filebeat.inputs:
+            - type: log
+              enabled: true
+              paths:
+                - /var/log/mysql/*.log
+
+    - name: Install Metricbeat
+      include_role:
+        name: elastic.beats
+      vars:
+        beat: metricbeat
+        beat_conf:
+          metricbeat.modules:
+            - module: mysql
+              metricsets:
+                - status
+              period: 10s
+              hosts: ["localhost"]
+  handlers:
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+...

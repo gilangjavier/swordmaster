@@ -1,0 +1,83 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    domain_name: your_domain
+    email_address: your_email
+  tasks:
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: latest
+        update_cache: yes
+        
+    - name: Remove default Nginx configuration file
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Create Nginx configuration for Prometheus
+      copy:
+        dest: /etc/nginx/sites-available/prometheus
+        content: |
+          server {
+            listen 80;
+            server_name prometheus.{{ domain_name }};
+
+            location / {
+              proxy_pass http://localhost:9090;
+            }
+          }
+    
+    - name: Enable Nginx configuration for Prometheus
+      file:
+        src: /etc/nginx/sites-available/prometheus
+        dest: /etc/nginx/sites-enabled/
+        state: link
+
+    - name: Create Nginx configuration for Grafana
+      copy:
+        dest: /etc/nginx/sites-available/grafana
+        content: |
+          server {
+            listen 80;
+            server_name grafana.{{ domain_name }};
+
+            location / {
+              proxy_pass http://localhost:3000;
+            }
+          }
+    
+    - name: Enable Nginx configuration for Grafana
+      file:
+        src: /etc/nginx/sites-available/grafana
+        dest: /etc/nginx/sites-enabled/
+        state: link
+
+    - name: Install software-properties-common package (required for add-apt-repository)
+      apt:
+        name: software-properties-common
+        state: latest
+        update_cache: yes
+
+    - name: Add Certbot APT repository
+      apt_repository:
+        repo: 'ppa:certbot/certbot'
+        state: present
+
+    - name: Install Certbot
+      apt:
+        name: python3-certbot-nginx
+        state: latest
+        update_cache: yes
+
+    - name: Generate SSL certificate for Prometheus
+      command: certbot --nginx -d prometheus.{{ domain_name }} --non-interactive --agree-tos --email {{ email_address }}
+
+    - name: Generate SSL certificate for Grafana
+      command: certbot --nginx -d grafana.{{ domain_name }} --non-interactive --agree-tos --email {{ email_address }}
+      
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
