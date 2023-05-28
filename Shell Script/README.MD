@@ -1,4 +1,4 @@
-# Shell Scripts for Docker Swarm Provisioning
+# Shell Scripts for Services Provisioning
 
 This repository contains various shell scripts for provisioning Docker Swarm and managing services in production environments.
 
