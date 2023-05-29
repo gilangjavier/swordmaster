@@ -1,0 +1,68 @@
+---
+- hosts: swarm
+  become: true
+  gather_facts: true
+  vars:
+    manager_ip: "IP_OF_THE_MANAGER_NODE"
+
+  tasks:
+    - name: Update repositories
+      apt:
+        update_cache: yes
+
+    - name: Install docker.io package
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Start and enable docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add docker users to docker group
+      user:
+        name: "{{ item }}"
+        append: yes
+        groups: docker
+      with_items:
+        - ubuntu
+
+    - name: Setup Docker Swarm Manager
+      command: docker swarm init --advertise-addr {{ manager_ip }}
+      run_once: true
+      delegate_to: "{{ groups['swarm_manager'][0] }}"
+      register: manager_result
+      ignore_errors: true
+
+    - name: Get swarm manager token
+      set_fact:
+        manager_token: "{{ manager_result.stdout_lines[-2] | regex_replace('^.*\\((.*)\\)') }}"
+
+    - name: Join swarm as a worker
+      command: >
+        docker swarm join --token {{ manager_token }} {{ manager_ip }}:2377
+      when: "'swarm_manager' not in group_names"
+      register: worker_result
+      ignore_errors: true
+
+    - name: Debug
+      debug:
+        msg: "{{ worker_result }}"
+
+- hosts: swarm_manager
+  become: true
+  gather_facts: true
+  vars:
+    manager_ip: "IP_OF_THE_MANAGER_NODE"
+
+  tasks:
+    - name: Get worker token
+      command: docker swarm join-token worker
+      register: worker_token_result
+
+    - name: Debug
+      debug:
+        msg: "{{ worker_token_result }}"
+...
