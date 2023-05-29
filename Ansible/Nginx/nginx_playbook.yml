@@ -1,0 +1,39 @@
+---
+- hosts: your_host
+  become: yes
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: 'yes'
+    
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Install necessary packages
+      apt:
+        name: ['wget', 'lsb-release']
+        state: present
+
+    - name: Install snapd
+      apt:
+        name: snapd
+        state: present
+
+    - name: Install certbot
+      command: snap install --classic certbot
+
+    - name: Create certbot symlink
+      file:
+        src: /snap/bin/certbot
+        dest: /usr/bin/certbot
+        state: link
+
+    - name: Obtain SSL certificate
+      command: certbot --nginx -d your_domain.com
+
+    - name: Verify Nginx is running
+      command: systemctl status nginx
+...

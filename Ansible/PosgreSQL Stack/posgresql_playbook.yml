@@ -1,0 +1,61 @@
+---
+- hosts: your_host
+  become: yes
+  vars:
+    postgresql_version: 13
+    postgresql_db_name: your_database_name
+    postgresql_db_user: your_database_user
+    postgresql_db_password: your_database_password
+    pgadmin_default_email: your_pgadmin_email
+    pgadmin_default_password: your_pgadmin_password
+  roles:
+    - geerlingguy.postgresql
+    - geerlingguy.nginx
+    - geerlingguy.certbot
+  tasks:
+    - name: Create directory for site
+      file:
+        path: /var/www/pgadmin
+        state: directory
+
+    - name: Setup Nginx site configuration
+      copy:
+        src: /your/path/to/nginx/pgadmin.conf
+        dest: /etc/nginx/sites-available/pgadmin.conf
+      notify:
+        - Reload nginx
+
+    - name: Enable site configuration
+      file:
+        src: /etc/nginx/sites-available/pgadmin.conf
+        dest: /etc/nginx/sites-enabled/pgadmin.conf
+        state: link
+
+    - name: Setup PostgreSQL database
+      postgresql_db:
+        name: "{{ postgresql_db_name }}"
+        state: present
+
+    - name: Setup PostgreSQL user
+      postgresql_user:
+        name: "{{ postgresql_db_user }}"
+        password: "{{ postgresql_db_password }}"
+        priv: "{{ postgresql_db_name }}.*:ALL"
+        state: present
+
+    - name: Run PGAdmin Docker container
+      docker_container:
+        name: pgadmin
+        image: dpage/pgadmin4
+        state: started
+        restart_policy: always
+        published_ports: 5050:80
+        env:
+          PGADMIN_DEFAULT_EMAIL: "{{ pgadmin_default_email }}"
+          PGADMIN_DEFAULT_PASSWORD: "{{ pgadmin_default_password }}"
+  handlers:
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+...

@@ -1,0 +1,42 @@
+---
+- hosts: your_host
+  become: yes
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: 'yes'
+    
+    - name: Install necessary packages
+      apt:
+        name: ['wget', 'lsb-release']
+        state: present
+    
+    - name: Download Litespeed
+      get_url:
+        url: https://www.litespeedtech.com/packages/5.0/lsws-5.4.8-ent-x86_64-linux.tar.gz
+        dest: /tmp/lsws-5.4.8-ent-x86_64-linux.tar.gz
+    
+    - name: Extract Litespeed package
+      unarchive:
+        src: /tmp/lsws-5.4.8-ent-x86_64-linux.tar.gz
+        dest: /opt
+        remote_src: yes
+
+    - name: Run Litespeed install script
+      command: /opt/lsws-5.4.8/install.sh
+
+    - name: Install snapd
+      apt:
+        name: snapd
+        state: present
+
+    - name: Install certbot
+      command: snap install --classic certbot
+
+    - name: Create certbot symlink
+      file:
+        src: /snap/bin/certbot
+        dest: /usr/bin/certbot
+        state: link
+...

@@ -1,0 +1,105 @@
+---
+- hosts: your_host
+  become: yes
+  vars:
+    cockroachdb_version: v21.1.7
+    cockroachdb_cluster_name: your_cluster_name
+    cockroachdb_cert_directory: /var/lib/cockroach/certs
+    cockroachdb_user: your_cockroachdb_user
+    cockroachdb_db: your_database
+    nginx_server_name: your_nginx_server_name
+  tasks:
+    - name: Download and extract CockroachDB
+      unarchive:
+        src: https://binaries.cockroachdb.com/cockroach-{{ cockroachdb_version }}.linux-amd64.tgz
+        dest: /usr/local/bin
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+        creates: /usr/local/bin/cockroach
+
+    - name: Create CockroachDB directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - /var/lib/cockroach
+        - "{{ cockroachdb_cert_directory }}"
+
+    - name: Generate CockroachDB certificates
+      command: cockroach cert create-ca --certs-dir={{ cockroachdb_cert_directory }} --ca-key={{ cockroachdb_cert_directory }}/ca.key
+      args:
+        creates: "{{ cockroachdb_cert_directory }}/ca.crt"
+
+    - name: Generate CockroachDB node certificate
+      command: cockroach cert create-node localhost 127.0.0.1 --certs-dir={{ cockroachdb_cert_directory }} --ca-key={{ cockroachdb_cert_directory }}/ca.key
+      args:
+        creates: "{{ cockroachdb_cert_directory }}/node.crt"
+
+    - name: Generate CockroachDB client root certificate
+      command: cockroach cert create-client root --certs-dir={{ cockroachdb_cert_directory }} --ca-key={{ cockroachdb_cert_directory }}/ca.key
+      args:
+        creates: "{{ cockroachdb_cert_directory }}/client.root.crt"
+
+    - name: Start CockroachDB secure cluster
+      shell: |
+        cockroach start \
+          --certs-dir={{ cockroachdb_cert_directory }} \
+          --store=/var/lib/cockroach \
+          --listen-addr=localhost \
+          --http-addr=localhost \
+          --join=localhost:26257 \
+          --background
+
+    - name: Initialize CockroachDB secure cluster
+      command: cockroach init --certs-dir={{ cockroachdb_cert_directory }} --host=localhost:26257
+
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Install Certbot
+      apt:
+        name: certbot python3-certbot-nginx
+        state: present
+
+    - name: Generate Nginx server block for CockroachDB Console
+      blockinfile:
+        path: /etc/nginx/sites-available/default
+        block: |
+          server {
+            listen 80;
+            server_name {{ nginx_server_name }};
+        
+            location / {
+              proxy_pass http://localhost:8080;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header Host $http_host;
+              proxy_redirect off;
+            }
+          }
+        state: present
+
+    - name: Remove default Nginx server block
+      lineinfile:
+        path: /etc/nginx/sites-available/default
+        state: absent
+        regexp: "^server {"
+
+    - name: Check Nginx configuration
+      command: nginx -t
+      changed_when: false
+
+    - name: Reload Nginx
+      systemd:
+        name: nginx
+        state: reloaded
+
+    - name: Obtain a certificate using the Nginx plugin
+      command: certbot --nginx -d {{ nginx_server_name }} --non-interactive --agree-tos -m your_email@example.com --keep-until-expiring
+      become: true
+...

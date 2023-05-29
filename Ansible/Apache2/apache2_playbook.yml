@@ -1,0 +1,34 @@
+---
+- hosts: your_host
+  become: yes
+  vars:
+    apache_server_name: your_server_name
+  tasks:
+    - name: Install Apache
+      apt:
+        name: apache2
+        state: present
+      notify: Restart Apache
+
+    - name: Enable Apache mod_ssl and mod_rewrite
+      command: a2enmod {{ item }}
+      loop:
+        - ssl
+        - rewrite
+      notify: Restart Apache
+
+    - name: Install Certbot
+      apt:
+        name: certbot python3-certbot-apache
+        state: present
+
+    - name: Obtain a certificate using the Apache plugin
+      command: certbot --apache -d {{ apache_server_name }} --non-interactive --agree-tos -m your_email@example.com --keep-until-expiring
+      become: true
+
+  handlers:
+    - name: Restart Apache
+      systemd:
+        name: apache2
+        state: restarted
+...

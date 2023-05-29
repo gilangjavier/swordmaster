@@ -1,0 +1,54 @@
+---
+- hosts: your_host
+  become: yes
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: 'yes'
+    
+    - name: Install Lighttpd
+      apt:
+        name: lighttpd
+        state: present
+
+    - name: Enable mod_ssl in Lighttpd
+      command: lighttpd-enable-mod ssl
+
+    - name: Install necessary packages
+      apt:
+        name: ['wget', 'lsb-release']
+        state: present
+
+    - name: Install snapd
+      apt:
+        name: snapd
+        state: present
+
+    - name: Install certbot
+      command: snap install --classic certbot
+
+    - name: Create certbot symlink
+      file:
+        src: /snap/bin/certbot
+        dest: /usr/bin/certbot
+        state: link
+
+    - name: Obtain SSL certificate
+      command: certbot certonly --webroot -w /var/www/your_domain -d your_domain.com
+
+    - name: Modify Lighttpd SSL config
+      blockinfile:
+        path: /etc/lighttpd/conf-enabled/10-ssl.conf
+        block: |
+          $SERVER["socket"] == ":443" {
+            ssl.engine  = "enable"
+            ssl.pemfile = "/etc/letsencrypt/live/your_domain/privkey.pem"
+            ssl.ca-file = "/etc/letsencrypt/live/your_domain/fullchain.pem"
+          }
+
+    - name: Restart Lighttpd
+      service:
+        name: lighttpd
+        state: restarted
+...

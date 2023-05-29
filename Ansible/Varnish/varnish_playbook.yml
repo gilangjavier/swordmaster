@@ -1,0 +1,59 @@
+---
+- hosts: your_host
+  become: yes
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: 'yes'
+    
+    - name: Install Varnish
+      apt:
+        name: varnish
+        state: present
+
+    - name: Install necessary packages
+      apt:
+        name: ['wget', 'lsb-release']
+        state: present
+
+    - name: Install snapd
+      apt:
+        name: snapd
+        state: present
+
+    - name: Install certbot
+      command: snap install --classic certbot
+
+    - name: Create certbot symlink
+      file:
+        src: /snap/bin/certbot
+        dest: /usr/bin/certbot
+        state: link
+
+    - name: Obtain SSL certificate
+      command: certbot certonly --standalone -d your_domain.com --pre-hook "service varnish stop" --post-hook "service varnish start"
+
+    - name: Install Hitch (SSL Termination)
+      apt:
+        name: hitch
+        state: present
+
+    - name: Modify Hitch config to use the new SSL certificate
+      blockinfile:
+        path: /etc/hitch/hitch.conf
+        block: |
+          pem-file = "/etc/letsencrypt/live/your_domain/fullchain.pem"
+          backend = "[localhost]:6086"
+          frontend = "[*]:443"
+          workers = 4
+          daemon = on
+          write-ip = off
+          write-proxy-v2 = on
+          proxy-proxy = off
+
+    - name: Restart Hitch
+      service:
+        name: hitch
+        state: restarted
+...
