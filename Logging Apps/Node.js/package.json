@@ -1,0 +1,15 @@
+{
+    "name": "nodejs-logging-app",
+    "version": "1.0.0",
+    "description": "A Node.js app with ECS logging using Winston",
+    "main": "app.js",
+    "scripts": {
+      "start": "node app.js"
+    },
+    "dependencies": {
+      "express": "^4.17.1",
+      "pino": "^6.11.3",
+      "pino-pretty": "^4.7.1",
+      "@elastic/ecs-pino-format": "^1.3.0"
+    }
+  }
