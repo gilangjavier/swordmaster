@@ -10,7 +10,7 @@ def get_domains(zone):
 
 def add_record(zone, record_type, name, content, ttl):
     try:
-        command = f'flarectl dns create-or-update --zone {zone} --type {record_type} --name {name} --content {content} --ttl {ttl}'
+        command = f'flarectl dns create --zone {zone} --type {record_type} --name {name} --content {content} --ttl {ttl}'
         output = subprocess.check_output(command, shell=True).decode('utf-8').strip()
         print(output)
     except subprocess.CalledProcessError as e:
