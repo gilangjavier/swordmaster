@@ -60,4 +60,4 @@ Open a pull request.
 Feel free to reach out at <codeorbit_io@gmail.com> <gillvision0@gmail.com>
 
 ## License
-This project Open-Source.
+This project is licensed under the MIT [License](). See LICENSE for more information.
